@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Bin Cherry&#39;s blog</title>
+    <link>https://bincherry.github.io/</link>
+    <description>Recent content on Bin Cherry&#39;s blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-hans</language><atom:link href="https://bincherry.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>About bincherry</title>
+      <link>https://bincherry.github.io/about/</link>
+      <pubDate>Sun, 08 Nov 2020 00:00:00 +0800</pubDate>
+      
+      <guid>https://bincherry.github.io/about/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>
