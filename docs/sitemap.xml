@@ -8,11 +8,32 @@
   </url>
   
   <url>
-    <loc>https://bincherry.github.io/archives/</loc>
+    <loc>https://bincherry.github.io/</loc>
+    <lastmod>2020-06-26T17:10:00+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://bincherry.github.io/</loc>
+    <loc>https://bincherry.github.io/tags/ha/</loc>
+    <lastmod>2020-06-26T17:10:00+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://bincherry.github.io/tags/kubernetes/</loc>
+    <lastmod>2020-06-26T17:10:00+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://bincherry.github.io/post/kubernetes_highly_available/</loc>
+    <lastmod>2020-06-26T17:10:00+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://bincherry.github.io/post/</loc>
+    <lastmod>2020-06-26T17:10:00+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://bincherry.github.io/archives/</loc>
   </url>
   
   <url>
