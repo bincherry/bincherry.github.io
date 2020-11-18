@@ -43,14 +43,14 @@ Understandable Distributed Consensus](http://thesecretlivesofdata.com/raft/)
 - Candidate
   - 当Leader下限时，Follower转变为参与选举
 
-![节点状态](/img/kubernetes_highly_available/etcd_state.png)
+![节点状态](https://i.loli.net/2020/11/18/IGCb4R6Pt7DyKie.png)
 
 
 图中左侧节点为Leader，另外两节点为Follower。客户端发出的所有请求都将由Leader接管，正常情况下，Leader将请求的命令通过日志发送到每一个Follower。当Follower接收到消息后，将数据写入自己的日志并告知Leader接收成功，Leader在收到多数节点的回复后，确认命令执行正常。
 
 ### 选举
 
-![选举](/img/kubernetes_highly_available/etcd_election.png)
+![选举](https://i.loli.net/2020/11/18/sXNzgTcqdA7FoRH.png)
 
 Leader和Follower之间通过心跳消息保持连接。如果Follower在一段时间内没有收到来自Leader的心跳，就会转为Candidate，参与新一轮选举。
 
@@ -74,7 +74,7 @@ kube-controller-manager在每个master节点都会有一个实例在运行，但
 
 Leader通过分布式锁机制来实现，维护Endpoints资源对象来实现锁状态。集群启动时,各kube-controller-manager实例通过竞争的方式去抢占指定的 Endpoints资源锁。只有一个胜利者可以获得锁，将成为Leader，通过更新Endpoints的annotations，将自己的节点名写入control-plane.alpha.kubernetes.io/leader注解的holderIdentity的值，并周期性更新注解中的renewTime以声明对锁的持有状态，从而避免其他节点的实例进行争抢。当Leader出现异常，就不会再更新renewTime了，处于等待状态的其他各节点实例就将开始尝试获取锁，进行新一轮的竞争。这样就利用了Endpoints资源，轻易的实现了分布式的锁机制。
 
-![Controller Manager](/img/kubernetes_highly_available/controllermanager.png)
+![Controller Manager](https://i.loli.net/2020/11/18/bnkFmxZSCzLTo5X.png)
 
 加锁操作的原子性由resourceVersion来保证。所有通过apiserver对资源对象的操作，都具有原子性，包括Endpoints资源。资源对象有一个 resourceVersion 字段，用于标识资源版本，每次更新操作都会递增这个值。当尝试获取资源锁的时候， 需要更新Endpoints资源，请求会携带resourceVersion 字段，apiserver在更新资源前，会通过验证当前数据库中的resourceVersion 的值与更新请求指定的值是否相匹配，来确保在此次更新操作周期内没有其他的更新操作，从而保证了更新操作的原子性。当第一个请求成功更新Endpoints资源后，后续的竞争者的请求会因为resourceVersion不匹配而被拒绝，从而实现只有一个胜利者可以获得锁。
 
@@ -82,7 +82,7 @@ Leader通过分布式锁机制来实现，维护Endpoints资源对象来实现�
 
 kube-scheduler是kubernetes的调度器，作用是根据特定的调度算法和调度策略将Pod 调度到合适的节点上。监听kube-apiserver，查询还未分配Node的Pod，然后根据调度策略为这些Pod 分配节点。
 
-![Scheduler](/img/kubernetes_highly_available/scheduler.png)
+![Scheduler](https://i.loli.net/2020/11/18/479Xv8rFqZWhtCk.png)
 
 kube-scheduler的高可用机制与kube-controller-manager是相同的，同样利用Endpoints实现资源锁，保证高可用并维护Leader的竞争。
 
@@ -94,7 +94,7 @@ kube-scheduler的高可用机制与kube-controller-manager是相同的，同样�
 
 ### keepalived
 
-![Apiserver keepalived](/img/kubernetes_highly_available/apiserver_keepalived.png)
+![Apiserver keepalived](https://i.loli.net/2020/11/18/NsUxrhFyVR5b3fw.png)
 
 在高可用部署时，通过static pod在每个master节点部署keepalived。keepalived通过VRRP协议在master节点之间维护一个虚拟IP，VIP（Virtual IP address），控制几个master节点组成一套高可用主备系统。整套主备系统包括一台为主节点MASTER，其余为备份节点BACKUP，但是对外表现为一个VIP。这个VIP是一个原本不存在于网络中的IP，会被keepalived自动被添加到MASTER节点的网卡上，此时MASTER节点应当有2个IP地址：原本的主机IP，和由keepalived添加的VIP。VIP会作为一个普通的IP地址，接受网络请求，相当于客户端不需要知道有几个节点，也不需要知道各自的主机IP，只认为有一个VIP节点，通过VIP就可以连接apiserver。
 
@@ -102,7 +102,7 @@ keepalived的作用就是在节点间维护VIP，持续检测当前节点的apis
 
 ### haproxy
 
-![Apiserver haproxy](/img/kubernetes_highly_available/apiserver_haproxy.png)
+![Apiserver haproxy](https://i.loli.net/2020/11/18/85eEtgwRb19JMsz.png)
 
 上述结构在引入了keepalived之后，可以实现集群kube-apiserver的高可用，不过有一个不足之处，只有一个实例处于工作状态，其他节点的kube-apiserver不会被来自VIP的外部请求访问。
 

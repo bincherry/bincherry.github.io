@@ -9,7 +9,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta http-equiv="Cache-Control" content="no-transform" />
 <meta http-equiv="Cache-Control" content="no-siteapp" />
-<meta name="generator" content="Hugo 0.78.1" />
+<meta name="generator" content="Hugo 0.78.2" />
 
 
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/amzrk2/cdn-stcapi@1/favicons/favicon.ico" />
@@ -150,11 +150,11 @@ Understandable Distributed Consensus</a></p>
 </ul>
 </li>
 </ul>
-<p><img class="img-zoomable" src="/img/kubernetes_highly_available/etcd_state.png" alt="节点状态" />
+<p><img class="img-zoomable" src="https://i.loli.net/2020/11/18/IGCb4R6Pt7DyKie.png" alt="节点状态" />
 </p>
 <p>图中左侧节点为Leader，另外两节点为Follower。客户端发出的所有请求都将由Leader接管，正常情况下，Leader将请求的命令通过日志发送到每一个Follower。当Follower接收到消息后，将数据写入自己的日志并告知Leader接收成功，Leader在收到多数节点的回复后，确认命令执行正常。</p>
 <h3 id="选举">选举</h3>
-<p><img class="img-zoomable" src="/img/kubernetes_highly_available/etcd_election.png" alt="选举" />
+<p><img class="img-zoomable" src="https://i.loli.net/2020/11/18/sXNzgTcqdA7FoRH.png" alt="选举" />
 </p>
 <p>Leader和Follower之间通过心跳消息保持连接。如果Follower在一段时间内没有收到来自Leader的心跳，就会转为Candidate，参与新一轮选举。</p>
 <p>集群初始化的时候，内部的节点都是Follower节点，都在等待Leader的心跳，这里的超时时间是个随机数，因此会有一个节点首先因为没有收到心跳而转为Candidate，发起选主请求。当这个节点获得了大于一半节点的投票后会转为Leader节点。</p>
@@ -169,24 +169,24 @@ Understandable Distributed Consensus</a></p>
 <p>由于运行在集群之中，而集群的etcd和apiserver的高可用已经另有保障，所以kube-controller-manager不需要再独立实现一套高可用方案，实际是借用集群的Endpoints资源来实现锁机制，保证高可用并维护Leader的竞争。</p>
 <h3 id="resource-lock">Resource Lock</h3>
 <p>Leader通过分布式锁机制来实现，维护Endpoints资源对象来实现锁状态。集群启动时,各kube-controller-manager实例通过竞争的方式去抢占指定的 Endpoints资源锁。只有一个胜利者可以获得锁，将成为Leader，通过更新Endpoints的annotations，将自己的节点名写入control-plane.alpha.kubernetes.io/leader注解的holderIdentity的值，并周期性更新注解中的renewTime以声明对锁的持有状态，从而避免其他节点的实例进行争抢。当Leader出现异常，就不会再更新renewTime了，处于等待状态的其他各节点实例就将开始尝试获取锁，进行新一轮的竞争。这样就利用了Endpoints资源，轻易的实现了分布式的锁机制。</p>
-<p><img class="img-zoomable" src="/img/kubernetes_highly_available/controllermanager.png" alt="Controller Manager" />
+<p><img class="img-zoomable" src="https://i.loli.net/2020/11/18/bnkFmxZSCzLTo5X.png" alt="Controller Manager" />
 </p>
 <p>加锁操作的原子性由resourceVersion来保证。所有通过apiserver对资源对象的操作，都具有原子性，包括Endpoints资源。资源对象有一个 resourceVersion 字段，用于标识资源版本，每次更新操作都会递增这个值。当尝试获取资源锁的时候， 需要更新Endpoints资源，请求会携带resourceVersion 字段，apiserver在更新资源前，会通过验证当前数据库中的resourceVersion 的值与更新请求指定的值是否相匹配，来确保在此次更新操作周期内没有其他的更新操作，从而保证了更新操作的原子性。当第一个请求成功更新Endpoints资源后，后续的竞争者的请求会因为resourceVersion不匹配而被拒绝，从而实现只有一个胜利者可以获得锁。</p>
 <h2 id="scheduler">Scheduler</h2>
 <p>kube-scheduler是kubernetes的调度器，作用是根据特定的调度算法和调度策略将Pod 调度到合适的节点上。监听kube-apiserver，查询还未分配Node的Pod，然后根据调度策略为这些Pod 分配节点。</p>
-<p><img class="img-zoomable" src="/img/kubernetes_highly_available/scheduler.png" alt="Scheduler" />
+<p><img class="img-zoomable" src="https://i.loli.net/2020/11/18/479Xv8rFqZWhtCk.png" alt="Scheduler" />
 </p>
 <p>kube-scheduler的高可用机制与kube-controller-manager是相同的，同样利用Endpoints实现资源锁，保证高可用并维护Leader的竞争。</p>
 <h2 id="apiserver">Apiserver</h2>
 <p>默认安装的k8s集群，并没有支持kube-apiserver的高可用。虽然每个节点都有kube-apiserver的实例，每个实例也都可以独立接受请求并实现集群资源操作，但是并没有实现完整的高可用机制。比如在外部访问时，需要指定某一个master节点的IP作为访问地址，如果这个master节点处于故障状态，那么这个IP地址的API就是不能访问的，需要客户端手动更换地址到另一个master节点的IP再进行尝试。这不是一个完整的高可用系统。</p>
 <p>在实际使用环境中，可以通过keepalived的vip机制来保证可用性，并加入haproxy实现负载均衡。</p>
 <h3 id="keepalived">keepalived</h3>
-<p><img class="img-zoomable" src="/img/kubernetes_highly_available/apiserver_keepalived.png" alt="Apiserver keepalived" />
+<p><img class="img-zoomable" src="https://i.loli.net/2020/11/18/NsUxrhFyVR5b3fw.png" alt="Apiserver keepalived" />
 </p>
 <p>在高可用部署时，通过static pod在每个master节点部署keepalived。keepalived通过VRRP协议在master节点之间维护一个虚拟IP，VIP（Virtual IP address），控制几个master节点组成一套高可用主备系统。整套主备系统包括一台为主节点MASTER，其余为备份节点BACKUP，但是对外表现为一个VIP。这个VIP是一个原本不存在于网络中的IP，会被keepalived自动被添加到MASTER节点的网卡上，此时MASTER节点应当有2个IP地址：原本的主机IP，和由keepalived添加的VIP。VIP会作为一个普通的IP地址，接受网络请求，相当于客户端不需要知道有几个节点，也不需要知道各自的主机IP，只认为有一个VIP节点，通过VIP就可以连接apiserver。</p>
 <p>keepalived的作用就是在节点间维护VIP，持续检测当前节点的apiserver工作状态，根据是否健康计算出当前的权重优先级，向其他节点发送自己的权重优先级。如果MASTER节点优先级降低，而另一个BACKUP节点优先级更高，那么身份就会切换，VIP就会绑定到新的MASTER节点上。这样就在客户端没有感知的情况下，将apiserver的接入从故障节点切换到正常节点。</p>
 <h3 id="haproxy">haproxy</h3>
-<p><img class="img-zoomable" src="/img/kubernetes_highly_available/apiserver_haproxy.png" alt="Apiserver haproxy" />
+<p><img class="img-zoomable" src="https://i.loli.net/2020/11/18/85eEtgwRb19JMsz.png" alt="Apiserver haproxy" />
 </p>
 <p>上述结构在引入了keepalived之后，可以实现集群kube-apiserver的高可用，不过有一个不足之处，只有一个实例处于工作状态，其他节点的kube-apiserver不会被来自VIP的外部请求访问。</p>
 <p>与kube-controller-manager不同，kube-apiserver是可以多个实例同时工作的，既然有多个节点，就可以通过负载均衡机制分担任务压力，避免因为请求过多而造成性能下降和故障。</p>
